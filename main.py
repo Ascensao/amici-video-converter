@@ -37,12 +37,14 @@ def main():
             continue
 
         mov_files = []
+        total_size_mb = 0
         for root, dirs, files in os.walk(selected_drive):
             for file in files:
                 if file.lower().endswith('.mov'):
                     file_path = os.path.join(root, file)
                     file_size = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
                     mov_files.append((file_path, file_size))
+                    total_size_mb += file_size
 
         if not mov_files:
             print("No .mov files found in the selected drive/directory.")
@@ -51,6 +53,9 @@ def main():
         print("\nFound .mov files:")
         for file, size in mov_files:
             print(f"{file} - {size:.2f} MB")
+
+        total_size_gb = total_size_mb / 1024  # Convert MB to GB
+        print(f"\nTotal .mov file occupation space: {total_size_gb:.2f} GB")
 
         confirm = input("\nDo you really want to continue? All .mov files will be converted and then deleted. This action cannot be reversed. (yes/no): ")
         if confirm.lower() != 'yes':
@@ -61,7 +66,7 @@ def main():
         for file_path, _ in mov_files:
             output_path = file_path.replace('.mov', '.mp4').replace('.MOV', '.mp4')
 
-            print(f'Converting {file_path} to {output_path}...')
+            print(f'\n\nConverting {file_path} to {output_path}...')
             conversion_time = convert_mov_to_mp4(file_path, output_path)
             print(f'Conversion completed in {conversion_time:.2f} seconds.')
 
