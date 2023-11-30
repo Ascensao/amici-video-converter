@@ -42,15 +42,16 @@ def main():
             for file in files:
                 if file.lower().endswith('.mov'):
                     file_path = os.path.join(root, file)
-                    file_size = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
-                    mov_files.append((file_path, file_size))
-                    total_size_mb += file_size
+                    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
+                    if file_size_mb >= 100:  # Check if file is 100MB or larger
+                        mov_files.append((file_path, file_size_mb))
+                        total_size_mb += file_size_mb
 
         if not mov_files:
-            print("No .mov files found in the selected drive/directory.")
+            print("No .mov files of 100MB or larger found in the selected drive/directory.")
             continue
 
-        print("\nFound .mov files:")
+        print("\nFound .mov files (100MB or larger):")
         for file, size in mov_files:
             print(f"{file} - {size:.2f} MB")
 
@@ -66,7 +67,7 @@ def main():
         for file_path, _ in mov_files:
             output_path = file_path.replace('.mov', '.mp4').replace('.MOV', '.mp4')
 
-            print(f'\n\nConverting {file_path} to {output_path}...')
+            print(f'Converting {file_path} to {output_path}...')
             conversion_time = convert_mov_to_mp4(file_path, output_path)
             print(f'Conversion completed in {conversion_time:.2f} seconds.')
 
