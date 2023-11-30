@@ -36,24 +36,42 @@ def main():
             print("Invalid selection. Please try again.")
             continue
 
-        total_saved = 0
+        mov_files = []
         for root, dirs, files in os.walk(selected_drive):
             for file in files:
                 if file.lower().endswith('.mov'):
                     file_path = os.path.join(root, file)
-                    output_path = os.path.join(root, file.replace('.mov', '.mp4').replace('.MOV', '.mp4'))
+                    file_size = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
+                    mov_files.append((file_path, file_size))
 
-                    print(f'Converting {file_path} to {output_path}...')
-                    conversion_time = convert_mov_to_mp4(file_path, output_path)
-                    print(f'Conversion completed in {conversion_time:.2f} seconds.')
+        if not mov_files:
+            print("No .mov files found in the selected drive/directory.")
+            continue
 
-                    original_size = os.path.getsize(file_path)
-                    new_size = os.path.getsize(output_path)
-                    os.remove(file_path)  # Be cautious with this line
+        print("\nFound .mov files:")
+        for file, size in mov_files:
+            print(f"{file} - {size:.2f} MB")
 
-                    saved = original_size - new_size
-                    total_saved += saved
-                    print(f"Saved {saved / (1024 * 1024):.2f} MB for {file}.")
+        confirm = input("\nDo you really want to continue? All .mov files will be converted and then deleted. This action cannot be reversed. (yes/no): ")
+        if confirm.lower() != 'yes':
+            print("Operation cancelled.")
+            continue
+
+        total_saved = 0
+        for file_path, _ in mov_files:
+            output_path = file_path.replace('.mov', '.mp4').replace('.MOV', '.mp4')
+
+            print(f'Converting {file_path} to {output_path}...')
+            conversion_time = convert_mov_to_mp4(file_path, output_path)
+            print(f'Conversion completed in {conversion_time:.2f} seconds.')
+
+            original_size = os.path.getsize(file_path)
+            new_size = os.path.getsize(output_path)
+            os.remove(file_path)  # Be cautious with this line
+
+            saved = original_size - new_size
+            total_saved += saved
+            print(f"Saved {saved / (1024 * 1024):.2f} MB for {os.path.basename(file_path)}.")
 
         print(f"Total space saved: {total_saved / (1024 * 1024):.2f} MB.")
 
