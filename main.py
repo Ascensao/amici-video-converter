@@ -36,6 +36,13 @@ def main():
             print("Invalid selection. Please try again.")
             continue
 
+        min_size = input("Enter the minimum file size in MB for .mov files to be listed (enter 0 for all sizes): ")
+        try:
+            min_size_mb = float(min_size)
+        except ValueError:
+            print("Invalid size entered. Please enter a numeric value.")
+            continue
+
         mov_files = []
         total_size_mb = 0
         for root, dirs, files in os.walk(selected_drive):
@@ -43,15 +50,15 @@ def main():
                 if file.lower().endswith('.mov'):
                     file_path = os.path.join(root, file)
                     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
-                    if file_size_mb >= 100:  # Check if file is 100MB or larger
+                    if file_size_mb >= min_size_mb:
                         mov_files.append((file_path, file_size_mb))
                         total_size_mb += file_size_mb
 
         if not mov_files:
-            print("No .mov files of 100MB or larger found in the selected drive/directory.")
+            print(f"No .mov files of {min_size_mb}MB or larger found in the selected drive/directory.")
             continue
 
-        print("\nFound .mov files (100MB or larger):")
+        print(f"\nFound .mov files ({min_size_mb}MB or larger):")
         for file, size in mov_files:
             print(f"{file} - {size:.2f} MB")
 
@@ -67,13 +74,13 @@ def main():
         for file_path, _ in mov_files:
             output_path = file_path.replace('.mov', '.mp4').replace('.MOV', '.mp4')
 
-            print(f'Converting {file_path} to {output_path}...')
+            print(f'\n\nConverting {file_path} to {output_path}...')
             conversion_time = convert_mov_to_mp4(file_path, output_path)
             print(f'Conversion completed in {conversion_time:.2f} seconds.')
 
             original_size = os.path.getsize(file_path)
             new_size = os.path.getsize(output_path)
-            os.remove(file_path)  # Be cautious with this line
+            os.remove(file_path)
 
             saved = original_size - new_size
             total_saved += saved
