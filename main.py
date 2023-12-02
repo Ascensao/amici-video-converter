@@ -1,4 +1,5 @@
 import os
+os.environ['PYTHONIOENCODING'] = 'utf-8'
 import time
 from moviepy.editor import VideoFileClip
 
@@ -15,6 +16,7 @@ def convert_mov_to_mp4(input_path, output_path):
     start_time = time.time()
     clip = VideoFileClip(input_path)
     clip.write_videofile(output_path, codec='libx265')
+    clip.close()
     end_time = time.time()
     return end_time - start_time
 
@@ -74,8 +76,14 @@ def main():
         for file_path, _ in mov_files:
             output_path = file_path.replace('.mov', '.mp4').replace('.MOV', '.mp4')
 
-            print(f'\n\nConverting {file_path} to {output_path}...')
-            conversion_time = convert_mov_to_mp4(file_path, output_path)
+            print(f'\n\nConverting {file_path} ({size:.2f} MB) to {output_path}...')
+            
+            try:
+                conversion_time = convert_mov_to_mp4(file_path, output_path)
+            except UnicodeDecodeError:
+                print("A Unicode decoding error occurred. Skipping this file.")
+                continue
+            
             print(f'Conversion completed in {conversion_time:.2f} seconds.')
 
             original_size = os.path.getsize(file_path)
