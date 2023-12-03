@@ -73,7 +73,7 @@ def main():
             continue
 
         total_saved = 0
-        for file_path, _ in mov_files:
+        for file_path, size in mov_files:
             output_path = file_path.replace('.mov', '.mp4').replace('.MOV', '.mp4')
 
             print(f'\n\nConverting {file_path} ({size:.2f} MB) to {output_path}...')
