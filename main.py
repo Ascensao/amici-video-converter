@@ -1,3 +1,4 @@
+import subprocess
 import os
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 import time
@@ -17,6 +18,31 @@ def convert_mov_to_mp4(input_path, output_path):
     clip = VideoFileClip(input_path)
     clip.write_videofile(output_path, codec='libx265')
     clip.close()
+    end_time = time.time()
+    return end_time - start_time
+
+def convert_mov_to_mp4_gpu(input_path, output_path):
+    start_time = time.time()
+    
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    # FFmpeg command for GPU acceleration
+    # This example uses h264_nvenc for encoding which is specific to NVIDIA GPUs
+    cmd = [
+        os.path.join(dir_path, 'ffmpeg.exe'),
+        '-i', input_path,
+        '-c:v', 'hevc_nvenc',  # Change to HEVC NVENC for 10-bit support
+        '-preset', 'fast',
+        '-c:a', 'copy',
+        output_path
+    ]
+
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred: {e}")
+        return None
+
     end_time = time.time()
     return end_time - start_time
 
@@ -79,7 +105,7 @@ def main():
             print(f'\n\nConverting {file_path} ({size:.2f} MB) to {output_path}...')
             
             try:
-                conversion_time = convert_mov_to_mp4(file_path, output_path)
+                conversion_time = convert_mov_to_mp4_gpu(file_path, output_path)
             except UnicodeDecodeError:
                 print("A Unicode decoding error occurred. Skipping this file.")
                 continue
