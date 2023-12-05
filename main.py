@@ -31,8 +31,9 @@ def convert_mov_to_mp4_gpu(input_path, output_path):
     cmd = [
         os.path.join(dir_path, 'ffmpeg.exe'),
         '-i', input_path,
-        '-c:v', 'hevc_nvenc',  # Change to HEVC NVENC for 10-bit support
+        '-c:v', 'hevc_nvenc',  # Changed to HEVC NVENC for 10-bit support
         '-preset', 'fast',
+        '-crf', '0',
         '-c:a', 'copy',
         output_path
     ]
@@ -47,7 +48,8 @@ def convert_mov_to_mp4_gpu(input_path, output_path):
     return end_time - start_time
 
 def main():
-    while True:
+    log_file_path = 'log.txt'
+    with open(log_file_path, 'a') as log_file:
         drives = list_drives()
         print("Available Drives/Directories:")
         for i, drive in enumerate(drives):
@@ -55,21 +57,21 @@ def main():
 
         choice = input("Select a drive/directory by number (or 'exit' to quit): ")
         if choice.lower() == 'exit':
-            break
+            return
 
         try:
             selected_index = int(choice) - 1
             selected_drive = drives[selected_index]
         except (ValueError, IndexError):
             print("Invalid selection. Please try again.")
-            continue
+            return
 
         min_size = input("Enter the minimum file size in MB for .mov files to be listed (enter 0 for all sizes): ")
         try:
             min_size_mb = float(min_size)
         except ValueError:
             print("Invalid size entered. Please enter a numeric value.")
-            continue
+            return
 
         mov_files = []
         total_size_mb = 0
@@ -77,26 +79,26 @@ def main():
             for file in files:
                 if file.lower().endswith('.mov'):
                     file_path = os.path.join(root, file)
-                    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # Size in MB
+                    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
                     if file_size_mb >= min_size_mb:
                         mov_files.append((file_path, file_size_mb))
                         total_size_mb += file_size_mb
 
         if not mov_files:
             print(f"No .mov files of {min_size_mb}MB or larger found in the selected drive/directory.")
-            continue
+            return
 
         print(f"\nFound .mov files ({min_size_mb}MB or larger):")
         for file, size in mov_files:
             print(f"{file} - {size:.2f} MB")
 
-        total_size_gb = total_size_mb / 1024  # Convert MB to GB
+        total_size_gb = total_size_mb / 1024
         print(f"\nTotal .mov file occupation space: {total_size_gb:.2f} GB")
 
         confirm = input("\nDo you really want to continue? All .mov files will be converted and then deleted. This action cannot be reversed. (yes/no): ")
         if confirm.lower() != 'yes':
             print("Operation cancelled.")
-            continue
+            return
 
         total_saved = 0
         for file_path, size in mov_files:
@@ -112,13 +114,18 @@ def main():
             
             print(f'Conversion completed in {conversion_time:.2f} seconds.')
 
-            original_size = os.path.getsize(file_path)
-            new_size = os.path.getsize(output_path)
+            original_size = os.path.getsize(file_path) / (1024 * 1024)
+            new_size = os.path.getsize(output_path) / (1024 * 1024)
             os.remove(file_path)
 
-            saved = original_size - new_size
-            total_saved += saved
-            print(f"Saved {saved / (1024 * 1024):.2f} MB for {os.path.basename(file_path)}.")
+            saved_size = original_size - new_size
+            saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
+
+            log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
+            log_file.write(log_entry)
+
+            total_saved += saved_size
+            print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
 
         print(f"Total space saved: {total_saved / (1024 * 1024):.2f} MB.")
 
