@@ -2,7 +2,9 @@ import subprocess
 import os
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 import time
+import traceback
 from moviepy.editor import VideoFileClip
+
 
 def list_drives():
     # For Windows
@@ -48,23 +50,46 @@ def convert_mov_to_mp4_gpu(input_path, output_path):
     return end_time - start_time
 
 def main():
+    
+
     log_file_path = 'log.txt'
+
+
     with open(log_file_path, 'a') as log_file:
-        drives = list_drives()
-        print("Available Drives/Directories:")
-        for i, drive in enumerate(drives):
-            print(f"{i + 1}. {drive}")
+        print("Do you like to convert a specific folder or a full drive?\n1. Folder\n2. Full Drive")
+        choice = input("Enter your choice (1 or 2): ")
 
-        choice = input("Select a drive/directory by number (or 'exit' to quit): ")
-        if choice.lower() == 'exit':
+        if choice == '1':
+            # User chooses to convert a specific folder
+            folder_path = input("Enter the full path of the folder: ")
+            if not os.path.exists(folder_path):
+                print("The specified folder path does not exist. Please try again.")
+                return
+
+            # Use the specified folder path as the base directory
+            selected_drive = folder_path
+
+        elif choice == '2':
+            # User chooses to convert a full drive
+            drives = list_drives()
+            print("Available Drives/Directories:")
+            for i, drive in enumerate(drives):
+                print(f"{i + 1}. {drive}")
+
+            drive_choice = input("Select a drive/directory by number (or 'exit' to quit): ")
+            if drive_choice.lower() == 'exit':
+                return
+
+            try:
+                selected_index = int(drive_choice) - 1
+                selected_drive = drives[selected_index]
+            except (ValueError, IndexError):
+                print("Invalid selection. Please try again.")
+                return
+        else:
+            print("Invalid choice. Please enter 1 or 2.")
             return
 
-        try:
-            selected_index = int(choice) - 1
-            selected_drive = drives[selected_index]
-        except (ValueError, IndexError):
-            print("Invalid selection. Please try again.")
-            return
 
         min_size = input("Enter the minimum file size in MB for .mov files to be listed (enter 0 for all sizes): ")
         try:
@@ -114,18 +139,21 @@ def main():
             
             print(f'Conversion completed in {conversion_time:.2f} seconds.')
 
-            original_size = os.path.getsize(file_path) / (1024 * 1024)
-            new_size = os.path.getsize(output_path) / (1024 * 1024)
-            os.remove(file_path)
+            try:
+                original_size = os.path.getsize(file_path) / (1024 * 1024)
+                new_size = os.path.getsize(output_path) / (1024 * 1024)
+                os.remove(file_path)
 
-            saved_size = original_size - new_size
-            saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
+                saved_size = original_size - new_size
+                saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
 
-            log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
-            log_file.write(log_entry)
+                log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
+                log_file.write(log_entry)
 
-            total_saved += saved_size
-            print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
+                total_saved += saved_size
+                print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
+            except Exception as e:
+                print(f"Error processing file {file_path}. Check error_log.txt for details.")
 
         print(f"Total space saved: {total_saved / (1024 * 1024):.2f} MB.")
 
