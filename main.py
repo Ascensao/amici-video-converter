@@ -53,6 +53,7 @@ def main():
     
 
     log_file_path = 'log.txt'
+    error_log_file_path = 'error_log.txt'
 
 
     with open(log_file_path, 'a') as log_file:
@@ -133,10 +134,19 @@ def main():
             
             try:
                 conversion_time = convert_mov_to_mp4_gpu(file_path, output_path)
+                if conversion_time is not None:
+                    print(f'Conversion completed in {conversion_time:.2f} seconds.')
+                else:
+                    print("Conversion failed.")
+                    with open(error_log_file_path, 'a') as error_log:
+                        error_log.write(f"File {file_path} failed to convert.\n")
+                    continue
             except UnicodeDecodeError:
                 print("A Unicode decoding error occurred. Skipping this file.")
+                with open(error_log_file_path, 'a') as error_log:
+                    error_log.write(f"Unicode decoding error for file {file_path}.\n")
                 continue
-            
+                        
             print(f'Conversion completed in {conversion_time:.2f} seconds.')
 
             try:
