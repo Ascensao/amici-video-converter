@@ -32,10 +32,11 @@ def convert_mov_to_mp4_gpu(input_path, output_path):
     # This example uses h264_nvenc for encoding which is specific to NVIDIA GPUs
     cmd = [
         os.path.join(dir_path, 'ffmpeg.exe'),
+        '-y',
         '-i', input_path,
         '-c:v', 'hevc_nvenc',  # Changed to HEVC NVENC for 10-bit support
         '-preset', 'fast',
-        '-crf', '0',
+        '-cq', '0',
         '-c:a', 'copy',
         output_path
     ]
@@ -111,7 +112,7 @@ def main():
                         total_size_mb += file_size_mb
 
         if not mov_files:
-            print(f"No .mov files of {min_size_mb}MB or larger found in the selected drive/directory.")
+            print(f"No .mov files of {min_size_mb}MB or larger found in the selected drive/directory.\n")
             return
 
         print(f"\nFound .mov files ({min_size_mb}MB or larger):")
@@ -127,15 +128,31 @@ def main():
             return
 
         total_saved = 0
+        
         for file_path, size in mov_files:
-            output_path = file_path.replace('.mov', '.mp4').replace('.MOV', '.mp4')
+            
+            # Extract the file extension and convert it to lowercase
+            _, file_extension = os.path.splitext(file_path)
+            file_extension = file_extension.lower()
+
+            # Set the output file extension based on the original file's extension
+            if file_extension in ['.mkv', '.mov', '.mp4']:
+                output_extension = file_extension
+            else:
+                output_extension = '.mp4'
+
+            # Construct the output file path with the new extension
+            output_path = os.path.splitext(file_path)[0] + output_extension
 
             print(f'\n\nConverting {file_path} ({size:.2f} MB) to {output_path}...')
             
+            
+            conversion_successful = False
             try:
                 conversion_time = convert_mov_to_mp4_gpu(file_path, output_path)
                 if conversion_time is not None:
                     print(f'Conversion completed in {conversion_time:.2f} seconds.')
+                    conversion_successful = True 
                 else:
                     print("Conversion failed.")
                     with open(error_log_file_path, 'a') as error_log:
@@ -149,21 +166,24 @@ def main():
                         
             print(f'Conversion completed in {conversion_time:.2f} seconds.')
 
-            try:
-                original_size = os.path.getsize(file_path) / (1024 * 1024)
-                new_size = os.path.getsize(output_path) / (1024 * 1024)
-                os.remove(file_path)
+        # Check if conversion was successful and file is not one of the specified formats
+            _, file_extension = os.path.splitext(file_path)
+            if conversion_successful and file_extension.lower() not in ['.mov', '.mp4', '.mkv']:
+                try:
+                    original_size = os.path.getsize(file_path) / (1024 * 1024)
+                    new_size = os.path.getsize(output_path) / (1024 * 1024)
+                    os.remove(file_path)
 
-                saved_size = original_size - new_size
-                saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
+                    saved_size = original_size - new_size
+                    saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
 
-                log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
-                log_file.write(log_entry)
+                    log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
+                    log_file.write(log_entry)
 
-                total_saved += saved_size
-                print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
-            except Exception as e:
-                print(f"Error processing file {file_path}. Check error_log.txt for details.")
+                    total_saved += saved_size
+                    print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
+                except Exception as e:
+                    print(f"Error processing file {file_path}. Check error_log.txt for details.")
 
         print(f"Total space saved: {total_saved / (1024 * 1024):.2f} MB.")
 
