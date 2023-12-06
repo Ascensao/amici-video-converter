@@ -88,42 +88,40 @@ def main():
     log_file_path = 'log.txt'
     error_log_file_path = 'error_log.txt'
 
+    
+    print("Do you like to convert a specific folder or a full drive?\n1. Folder\n2. Full Drive")
+    choice = input("Enter your choice (1 or 2): ")
 
-    with open(log_file_path, 'a') as log_file:
-        print("Do you like to convert a specific folder or a full drive?\n1. Folder\n2. Full Drive")
-        choice = input("Enter your choice (1 or 2): ")
-
-        if choice == '1':
-            # User chooses to convert a specific folder
-            folder_path = input("Enter the full path of the folder: ")
-            if not os.path.exists(folder_path):
-                print("The specified folder path does not exist. Please try again.")
-                return
-
-            # Use the specified folder path as the base directory
-            selected_drive = folder_path
-
-        elif choice == '2':
-            # User chooses to convert a full drive
-            drives = list_drives()
-            print("Available Drives/Directories:")
-            for i, drive in enumerate(drives):
-                print(f"{i + 1}. {drive}")
-
-            drive_choice = input("Select a drive/directory by number (or 'exit' to quit): ")
-            if drive_choice.lower() == 'exit':
-                return
-
-            try:
-                selected_index = int(drive_choice) - 1
-                selected_drive = drives[selected_index]
-            except (ValueError, IndexError):
-                print("Invalid selection. Please try again.")
-                return
-        else:
-            print("Invalid choice. Please enter 1 or 2.")
+    if choice == '1':
+        # User chooses to convert a specific folder
+        folder_path = input("Enter the full path of the folder: ")
+        if not os.path.exists(folder_path):
+            print("The specified folder path does not exist. Please try again.")
             return
 
+        # Use the specified folder path as the base directory
+        selected_drive = folder_path
+
+    elif choice == '2':
+        # User chooses to convert a full drive
+        drives = list_drives()
+        print("Available Drives/Directories:")
+        for i, drive in enumerate(drives):
+            print(f"{i + 1}. {drive}")
+
+        drive_choice = input("Select a drive/directory by number (or 'exit' to quit): ")
+        if drive_choice.lower() == 'exit':
+            return
+
+        try:
+            selected_index = int(drive_choice) - 1
+            selected_drive = drives[selected_index]
+        except (ValueError, IndexError):
+            print("Invalid selection. Please try again.")
+            return
+    else:
+        print("Invalid choice. Please enter 1 or 2.")
+        return
 
     min_size = input("Enter the minimum file size in MB for video files to be listed (enter 0 for all sizes): ")
     try:
@@ -171,49 +169,57 @@ def main():
         file_name_without_ext, file_extension = os.path.splitext(file_path)
         file_extension = file_extension.lower()
 
+        # Determine the output file path
+        if file_extension in ['.mkv', '.mov', '.mp4']:
+            output_path = file_path  # Overwrite the existing file
+        else:
+            output_file_name = f"{file_name_without_ext}_converted.mp4"
+            output_path = os.path.join(os.path.dirname(file_path), output_file_name)
+
         print(f'\n\nConverting {file_path} ({size:.2f} MB) to {output_path}...')
-        
         
         conversion_successful = False
         try:
             conversion_time = convert_mov_to_mp4_gpu(file_path, output_path)
             if conversion_time is not None:
                 print(f'Conversion completed in {conversion_time:.2f} seconds.')
-                conversion_successful = True 
+                conversion_successful = True
             else:
                 print("Conversion failed.")
                 with open(error_log_file_path, 'a') as error_log:
                     error_log.write(f"File {file_path} failed to convert.\n")
                 continue
         except UnicodeDecodeError:
-            print("A Unicode decoding error occurred. Skipping this file.")
+            print("Conversion failed.")
             with open(error_log_file_path, 'a') as error_log:
-                error_log.write(f"Unicode decoding error for file {file_path}.\n")
+                error_log.write(f"File {file_path} failed to convert.\n")
             continue
                     
         
-        # Check if conversion was successful and file is not one of the specified formats
-        _, file_extension = os.path.splitext(file_path)
         if conversion_successful:
-            
+   
             # Delete in case new file was not overwritten
-            if file_extension.lower() not in ['.mov', '.mp4', '.mkv']:
+            if output_path != file_path:
                 try:
                     os.remove(file_path)
                 except Exception as e:
-                    print(f"Error deletingfile {file_path}. Check error_log.txt for details.")
-                    
+                    print(f"Error deleting file {file_path}. Check error_log.txt for details.")                    
             
             original_size = os.path.getsize(file_path) / (1024 * 1024)
             new_size = os.path.getsize(output_path) / (1024 * 1024)
             saved_size = original_size - new_size
             saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
 
-            log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
-            log_file.write(log_entry)
+            with open(log_file_path, 'a') as log_file:
+                log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
+                log_file.write(log_entry)
 
             total_saved += saved_size
             print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
+            
+        else:
+            print(f"Error converting {file_path}.")
+        
 
     print(f"Total space saved: {total_saved / (1024 * 1024):.2f} MB.")
 
