@@ -165,22 +165,25 @@ def main():
     total_saved = 0
     
     for file_path, size, codec in video_files:
-        # Extract the file name and extension
-        file_name_without_ext, file_extension = os.path.splitext(file_path)
-        file_extension = file_extension.lower()
-
-        # Determine the output file path
-        if file_extension in ['.mkv', '.mov', '.mp4']:
-            output_path = file_path  # Overwrite the existing file
+        
+        original_size = os.path.getsize(file_path) / (1024 * 1024)
+        file_name_without_ext, original_extension = os.path.splitext(file_path)
+        original_extension = original_extension.lower()
+            
+        if original_extension not in ['.mov', '.mp4', '.mkv']:
+            temp_extension = '.mp4'
         else:
-            output_file_name = f"{file_name_without_ext}_converted.mp4"
-            output_path = os.path.join(os.path.dirname(file_path), output_file_name)
+            temp_extension = original_extension
 
-        print(f'\n\nConverting {file_path} ({size:.2f} MB) to {output_path}...')
+        # Generate a temporary output file name
+        temp_output_path = f"{file_name_without_ext}_temp{temp_extension}"
+
+        print(f'\n\nConverting {file_path} ({size:.2f} MB) to {temp_output_path}...')
+
         
         conversion_successful = False
         try:
-            conversion_time = convert_mov_to_mp4_gpu(file_path, output_path)
+            conversion_time = convert_mov_to_mp4_gpu(file_path, temp_output_path)
             if conversion_time is not None:
                 print(f'Conversion completed in {conversion_time:.2f} seconds.')
                 conversion_successful = True
@@ -197,21 +200,27 @@ def main():
                     
         
         if conversion_successful:
-   
-            # Delete in case new file was not overwritten
-            if output_path != file_path:
-                try:
-                    os.remove(file_path)
-                except Exception as e:
-                    print(f"Error deleting file {file_path}. Check error_log.txt for details.")                    
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Error deleting file {file_path}: {e}")
+                continue
             
-            original_size = os.path.getsize(file_path) / (1024 * 1024)
-            new_size = os.path.getsize(output_path) / (1024 * 1024)
+            # Rename the temporary file to the original file name
+            final_output_path = file_name_without_ext + temp_extension
+            try:
+                os.rename(temp_output_path, final_output_path)
+            except Exception as e:
+                print(f"Error renaming file {temp_output_path}: {e}")
+                continue
+            
+            new_size = os.path.getsize(final_output_path) / (1024 * 1024)
             saved_size = original_size - new_size
             saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
-
+            
+            
             with open(log_file_path, 'a') as log_file:
-                log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
+                log_entry = f"{final_output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
                 log_file.write(log_entry)
 
             total_saved += saved_size
