@@ -2,6 +2,7 @@ import subprocess
 import os
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 import time
+import json
 import traceback
 from moviepy.editor import VideoFileClip
 
@@ -15,6 +16,35 @@ def list_drives():
         drives = ["/"]  # Root directory as a starting point; modify as needed
     return drives
 
+
+def get_video_encoding(file_path):
+    try:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        ffprobe_path = os.path.join(dir_path, 'ffprobe.exe')
+
+        cmd = [
+            ffprobe_path,
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_streams',
+            file_path
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.stderr:
+            print(f"ffprobe error for {file_path}: {result.stderr.strip()}")
+
+        if result.stdout:
+            info = json.loads(result.stdout)
+            for stream in info.get("streams", []):
+                if stream.get("codec_type") == "video":
+                    return stream.get("codec_name")
+    except Exception as e:
+        print(f"Error getting encoding for {file_path}: {e}")
+    return "Unknown"
+
+
 def convert_mov_to_mp4(input_path, output_path):
     start_time = time.time()
     clip = VideoFileClip(input_path)
@@ -22,6 +52,7 @@ def convert_mov_to_mp4(input_path, output_path):
     clip.close()
     end_time = time.time()
     return end_time - start_time
+
 
 def convert_mov_to_mp4_gpu(input_path, output_path):
     start_time = time.time()
@@ -50,9 +81,10 @@ def convert_mov_to_mp4_gpu(input_path, output_path):
     end_time = time.time()
     return end_time - start_time
 
+
+
 def main():
     
-
     log_file_path = 'log.txt'
     error_log_file_path = 'error_log.txt'
 
@@ -93,99 +125,97 @@ def main():
             return
 
 
-        min_size = input("Enter the minimum file size in MB for .mov files to be listed (enter 0 for all sizes): ")
-        try:
-            min_size_mb = float(min_size)
-        except ValueError:
-            print("Invalid size entered. Please enter a numeric value.")
-            return
+    min_size = input("Enter the minimum file size in MB for video files to be listed (enter 0 for all sizes): ")
+    try:
+        min_size_mb = float(min_size)
+    except ValueError:
+        print("Invalid size entered. Please enter a numeric value.")
+        return
 
-        mov_files = []
-        total_size_mb = 0
-        for root, dirs, files in os.walk(selected_drive):
-            for file in files:
-                if file.lower().endswith('.mov'):
-                    file_path = os.path.join(root, file)
-                    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-                    if file_size_mb >= min_size_mb:
-                        mov_files.append((file_path, file_size_mb))
+    # List of common video file extensions
+    video_extensions = ['.mov', '.mp4', '.mkv', '.avi', '.flv', '.wmv', '.mpeg', '.mpg']
+
+    video_files = []
+    total_size_mb = 0
+    for root, dirs, files in os.walk(selected_drive):
+        for file in files:
+            if any(file.lower().endswith(ext) for ext in video_extensions):
+                file_path = os.path.join(root, file)
+                file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                if file_size_mb >= min_size_mb:
+                    codec = get_video_encoding(file_path)
+                    if codec != "h265" or codec == "Unknown":
+                        video_files.append((file_path, file_size_mb, codec))  # Include codec in the tuple
                         total_size_mb += file_size_mb
 
-        if not mov_files:
-            print(f"No .mov files of {min_size_mb}MB or larger found in the selected drive/directory.\n")
-            return
+    if not video_files:
+        print(f"No video files that can be recoded found in the selected drive/directory.\n")
+        return
 
-        print(f"\nFound .mov files ({min_size_mb}MB or larger):")
-        for file, size in mov_files:
-            print(f"{file} - {size:.2f} MB")
+    print(f"\nFiles that can be re-encoded to h265 codec:")
+    for file, size, codec in video_files:
+        print(f"{file} - {size:.2f} MB - Codec: {codec}")
 
-        total_size_gb = total_size_mb / 1024
-        print(f"\nTotal .mov file occupation space: {total_size_gb:.2f} GB")
+    total_size_gb = total_size_mb / 1024
+    print(f"\nTotal video file occupation space: {total_size_gb:.2f} GB")
 
-        confirm = input("\nDo you really want to continue? All .mov files will be converted and then deleted. This action cannot be reversed. (yes/no): ")
-        if confirm.lower() != 'yes':
-            print("Operation cancelled.")
-            return
+    confirm = input("\nDo you really want to continue? All .mov files will be converted and then deleted. This action cannot be reversed. (yes/no): ")
+    if confirm.lower() != 'yes':
+        print("Operation cancelled.")
+        return
 
-        total_saved = 0
+    total_saved = 0
+    
+    for file_path, size, codec in video_files:
+        # Extract the file name and extension
+        file_name_without_ext, file_extension = os.path.splitext(file_path)
+        file_extension = file_extension.lower()
+
+        print(f'\n\nConverting {file_path} ({size:.2f} MB) to {output_path}...')
         
-        for file_path, size in mov_files:
-            
-            # Extract the file extension and convert it to lowercase
-            _, file_extension = os.path.splitext(file_path)
-            file_extension = file_extension.lower()
-
-            # Set the output file extension based on the original file's extension
-            if file_extension in ['.mkv', '.mov', '.mp4']:
-                output_extension = file_extension
+        
+        conversion_successful = False
+        try:
+            conversion_time = convert_mov_to_mp4_gpu(file_path, output_path)
+            if conversion_time is not None:
+                print(f'Conversion completed in {conversion_time:.2f} seconds.')
+                conversion_successful = True 
             else:
-                output_extension = '.mp4'
-
-            # Construct the output file path with the new extension
-            output_path = os.path.splitext(file_path)[0] + output_extension
-
-            print(f'\n\nConverting {file_path} ({size:.2f} MB) to {output_path}...')
-            
-            
-            conversion_successful = False
-            try:
-                conversion_time = convert_mov_to_mp4_gpu(file_path, output_path)
-                if conversion_time is not None:
-                    print(f'Conversion completed in {conversion_time:.2f} seconds.')
-                    conversion_successful = True 
-                else:
-                    print("Conversion failed.")
-                    with open(error_log_file_path, 'a') as error_log:
-                        error_log.write(f"File {file_path} failed to convert.\n")
-                    continue
-            except UnicodeDecodeError:
-                print("A Unicode decoding error occurred. Skipping this file.")
+                print("Conversion failed.")
                 with open(error_log_file_path, 'a') as error_log:
-                    error_log.write(f"Unicode decoding error for file {file_path}.\n")
+                    error_log.write(f"File {file_path} failed to convert.\n")
                 continue
-                        
-            print(f'Conversion completed in {conversion_time:.2f} seconds.')
-
+        except UnicodeDecodeError:
+            print("A Unicode decoding error occurred. Skipping this file.")
+            with open(error_log_file_path, 'a') as error_log:
+                error_log.write(f"Unicode decoding error for file {file_path}.\n")
+            continue
+                    
+        
         # Check if conversion was successful and file is not one of the specified formats
-            _, file_extension = os.path.splitext(file_path)
-            if conversion_successful and file_extension.lower() not in ['.mov', '.mp4', '.mkv']:
+        _, file_extension = os.path.splitext(file_path)
+        if conversion_successful:
+            
+            # Delete in case new file was not overwritten
+            if file_extension.lower() not in ['.mov', '.mp4', '.mkv']:
                 try:
-                    original_size = os.path.getsize(file_path) / (1024 * 1024)
-                    new_size = os.path.getsize(output_path) / (1024 * 1024)
                     os.remove(file_path)
-
-                    saved_size = original_size - new_size
-                    saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
-
-                    log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
-                    log_file.write(log_entry)
-
-                    total_saved += saved_size
-                    print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
                 except Exception as e:
-                    print(f"Error processing file {file_path}. Check error_log.txt for details.")
+                    print(f"Error deletingfile {file_path}. Check error_log.txt for details.")
+                    
+            
+            original_size = os.path.getsize(file_path) / (1024 * 1024)
+            new_size = os.path.getsize(output_path) / (1024 * 1024)
+            saved_size = original_size - new_size
+            saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
 
-        print(f"Total space saved: {total_saved / (1024 * 1024):.2f} MB.")
+            log_entry = f"{output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
+            log_file.write(log_entry)
+
+            total_saved += saved_size
+            print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
+
+    print(f"Total space saved: {total_saved / (1024 * 1024):.2f} MB.")
 
 if __name__ == "__main__":
     main()
