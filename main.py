@@ -96,7 +96,7 @@ def main():
         # User chooses to convert a specific folder
         folder_path = input("Enter the full path of the folder: ")
         if not os.path.exists(folder_path):
-            print("The specified folder path does not exist. Please try again.")
+            print("The specified folder path does not exist. Please enter a valid path.")
             return
 
         # Use the specified folder path as the base directory
@@ -120,14 +120,14 @@ def main():
             print("Invalid selection. Please try again.")
             return
     else:
-        print("Invalid choice. Please enter 1 or 2.")
+        print("Invalid choice. Please enter '1' for Folder or '2' for Full Drive.")
         return
 
-    min_size = input("Enter the minimum file size in MB for video files to be listed (enter 0 for all sizes): ")
+    min_size = input("Enter the minimum file size in MB for the video files to be processed (enter 0 for no size limit): ")
     try:
         min_size_mb = float(min_size)
     except ValueError:
-        print("Invalid size entered. Please enter a numeric value.")
+        print("Invalid size entered. Please enter a valid numeric value in MB.")
         return
 
     # List of common video file extensions
@@ -147,10 +147,10 @@ def main():
                         total_size_mb += file_size_mb
 
     if not video_files: 
-        print(f"No video files that can be recoded found in the selected drive/directory.\n")
+        print(f"No suitable video files for re-encoding found in the selected drive/directory.\n")
         return
 
-    print(f"\nFiles that can be re-encoded to h265 codec:")
+    print(f"\nFiles eligible for re-encoding to the H265 codec:")
     for file, size, codec in video_files:
         print(f"{file} - {size:.2f} MB - Codec: {codec}")
 
@@ -158,9 +158,9 @@ def main():
     print(f"\nTotal number of videos ready for conversion: {total_videos}")
     
     total_size_gb = total_size_mb / 1024
-    print(f"\nTotal video file occupation space: {total_size_gb:.2f} GB")
+    print(f"Total disk space occupied by videos: {total_size_gb:.2f} GB")
 
-    confirm = input("\nDo you really want to continue? All .mov files will be converted and then deleted. This action cannot be reversed. (yes/no): ")
+    confirm = input("\nDo you want to proceed? All selected video files will be re-encoded to the H265 codec. This action is irreversible. (yes/no): ")
     if confirm.lower() != 'yes':
         print("Operation cancelled.")
         return
@@ -229,9 +229,19 @@ def main():
 
             total_saved += saved_size
             print(f"Saved {saved_size:.2f} MB for {os.path.basename(file_path)}.")
+                        
             
         else:
             print(f"Error converting {file_path}.")
+            
+            
+        total_videos-= 1
+        print(f"Remaining videos for conversion: {total_videos}")
+        
+        # Update the total size of remaining videos
+        total_size_mb -= size
+        total_size_gb = total_size_mb / 1024
+        print(f"Remaining video file occupation space: {total_size_gb:.2f} GB")
         
 
     print(f"Total space saved: {total_saved / (1024 * 1024):.2f} MB.")
