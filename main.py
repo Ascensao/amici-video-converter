@@ -67,7 +67,7 @@ def convert_mov_to_mp4_gpu(input_path, output_path):
         '-i', input_path,
         '-c:v', 'hevc_nvenc',  # Changed to HEVC NVENC for 10-bit support
         '-preset', 'fast',
-        '-cq', '0',
+        '-crf', '0',
         '-c:a', 'copy',
         output_path
     ]
@@ -143,7 +143,7 @@ def main():
                 if file_size_mb >= min_size_mb:
                     codec = get_video_encoding(file_path)
                     if codec != "hevc" or codec == "Unknown":
-                        video_files.append((file_path, file_size_mb, codec))  # Include codec in the tuple
+                        video_files.append((file_path, file_size_mb, codec))
                         total_size_mb += file_size_mb
 
     if not video_files: 
@@ -154,6 +154,9 @@ def main():
     for file, size, codec in video_files:
         print(f"{file} - {size:.2f} MB - Codec: {codec}")
 
+    total_videos = len(video_files)
+    print(f"\nTotal number of videos ready for conversion: {total_videos}")
+    
     total_size_gb = total_size_mb / 1024
     print(f"\nTotal video file occupation space: {total_size_gb:.2f} GB")
 
@@ -208,6 +211,7 @@ def main():
             
             # Rename the temporary file to the original file name
             final_output_path = file_name_without_ext + temp_extension
+            
             try:
                 os.rename(temp_output_path, final_output_path)
             except Exception as e:
