@@ -178,14 +178,14 @@ def main():
         # Generate a temporary output file name
         temp_output_path = f"{file_name_without_ext}_temp{temp_extension}"
 
-        print(f'\n\nConverting {file_path} ({size:.2f} MB) to {temp_output_path}...')
+        print(f'\n\nConverting {file_path} ({codec}) ({size:.2f} MB) to {temp_output_path}...')
 
         
         conversion_successful = False
         try:
-            conversion_time = convert_mov_to_mp4_gpu(file_path, temp_output_path)
-            if conversion_time is not None:
-                print(f'Conversion completed in {conversion_time:.2f} seconds.')
+            conversion_file = convert_mov_to_mp4_gpu(file_path, temp_output_path)
+            if conversion_file is not None:
+                print(f'Conversion completed in {conversion_file:.2f} seconds.')
                 conversion_successful = True
             else:
                 print("Conversion failed.")
@@ -220,7 +220,7 @@ def main():
             
             
             with open(log_file_path, 'a') as log_file:
-                log_entry = f"{final_output_path}\t{conversion_time:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\n"
+                log_entry = f"{final_output_path}\t{conversion_file:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\t{codec}\n"
                 log_file.write(log_entry)
 
             total_saved += saved_size
