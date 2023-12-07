@@ -142,11 +142,11 @@ def main():
                 file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
                 if file_size_mb >= min_size_mb:
                     codec = get_video_encoding(file_path)
-                    if codec != "h265" or codec == "Unknown":
+                    if codec != "hevc" or codec == "Unknown":
                         video_files.append((file_path, file_size_mb, codec))  # Include codec in the tuple
                         total_size_mb += file_size_mb
 
-    if not video_files:
+    if not video_files: 
         print(f"No video files that can be recoded found in the selected drive/directory.\n")
         return
 
