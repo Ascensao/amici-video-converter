@@ -60,7 +60,6 @@ def convert_mov_to_mp4_gpu(input_path, output_path):
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # FFmpeg command for GPU acceleration
-    # This example uses h264_nvenc for encoding which is specific to NVIDIA GPUs
     cmd = [
         os.path.join(dir_path, 'ffmpeg.exe'),
         '-y',
