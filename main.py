@@ -187,6 +187,7 @@ def main():
         conversion_successful = False
         try:
             conversion_file = convert_mov_to_mp4_gpu(file_path, temp_output_path)
+            
             if conversion_file is not None:
                 print(f'Conversion completed in {conversion_file:.2f} seconds.')
                 conversion_successful = True
@@ -194,12 +195,11 @@ def main():
                 print("Conversion failed.")
                 with open(error_log_file_path, 'a') as error_log:
                     error_log.write(f"File {file_path} failed to convert.\n")
-                continue
-        except UnicodeDecodeError:
-            print("Conversion failed.")
+
+        except Exception as e:
+            print(f"Conversion failed for {file_path}: {e}")
             with open(error_log_file_path, 'a') as error_log:
-                error_log.write(f"File {file_path} failed to convert.\n")
-            continue
+                error_log.write(f"File {file_path} failed to convert: {e}\n")
                     
         
         if conversion_successful:
@@ -221,7 +221,6 @@ def main():
             new_size = os.path.getsize(final_output_path) / (1024 * 1024)
             saved_size = original_size - new_size
             saved_percentage = (saved_size / original_size) * 100 if original_size != 0 else 0
-            
             
             with open(log_file_path, 'a') as log_file:
                 log_entry = f"{final_output_path}\t{conversion_file:.2f} seconds\t{original_size:.2f} MB\t{new_size:.2f} MB\t-{saved_size:.2f} MB\t-{saved_percentage:.2f}%\t{codec}\n"
