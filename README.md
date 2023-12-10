@@ -12,16 +12,26 @@ This Python script is designed to automate the process of finding and converting
 - Calculates and displays the amount of disk space saved after conversion.
 - Generates logs for successful conversions and errors.
 
-
+---
 
 ## Disk Space Savings
-The conversion process not only makes files more efficient but also significantly reduces disk space usage. Below are two graphs that illustrate the average size reduction by the original codec and the relationship between the original size and the percentage reduction.
+The conversion process not only makes files more efficient but also significantly reduces disk space usage. Below are two graphs that illustrate the average size reduction by the original codec and the relationship between the original size and the percentage reduction, based on a sample of 850 files.
 
 ### Average Size Reduction by Original Codec
-*This bar chart shows the average percentage reduction in file size after conversion, categorized by the original codec of the video files. As seen, the re-encoding process yields substantial savings, especially for older codecs.*
+![graph](https://github.com/Ascensao/amici-video-converter/assets/8701603/84ce3f5b-27d8-4988-bffe-8321e4147d5d)
+
+*This bar chart represents the average percentage reduction in file size after conversion, categorized by the original codec of the video files, based on a sample of 850 files. As seen, the re-encoding process yields substantial savings, especially for older codecs.*
+
+---
+
 
 ### Original Size vs. Percentage Reduction
-*This scatter plot provides a detailed view of the percentage reduction in file size relative to the original size of the video files. Each point represents a file, demonstrating the variance in efficiency gains across different file sizes.*
+![b86d918f-0071-4e30-9368-88286132dc29](https://github.com/Ascensao/amici-video-converter/assets/8701603/81b443b6-21c3-4f57-a23e-ebef81bc39ee)
+
+
+*This scatter plot provides a detailed view of the percentage reduction in file size relative to the original size of the video files, for a sample of 850 files. Each point represents a file, demonstrating the variance in efficiency gains across different file sizes.*
+
+---
 
 ## Prerequisites
 - Python 3.x
